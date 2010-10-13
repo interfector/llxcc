@@ -5,17 +5,31 @@
 /* ebx     Use for calculating */
 /* ecx     Flags */
 /* edx     Mode */
-/* %ebp    Old EIP */
-/* %esp    Stack */
+/* ebp     Old EIP */
+/* esp     Stack */
 
 #define MLBIT(size) static struct { unsigned char _dummy[size]; } const
 
-MLBIT(12) init = { { 0x31, 0xc0, /* xor %eax,%eax */
+MLBIT(48) init = { { 0xe8, 0x00, 0x00, 0x00, 0x00, /* call here */  /* mprotect( _start, 4096, PROT_READ|PROT_WRITE|PROT_EXEC ); */
+				 0x31, 0xc0, /* xor %eax,%eax */ 
+				 0xb0, 0x7d, /* mov $125,%eax */
+				 0xb9, 0xff, 0x0f, 0x00, 0x00, /* mov $0x0fff,%ecx */
+				 0xf7, 0xd1, /* not %ecx */
+				 0x5b, /* pop %ebx */
+				 0x83, 0xeb, 0x05, /* sub $5,%ebx */
+				 0x21, 0xcb, /* and %ecx,%ebx */
+				 0xb9, 0x00, 0x10, 0x00, 0x00, /* mov $4096,%ecx */
+				 0x31, 0xd2, /* xor %edx,%edx */
+				 0xb2, 0x07, /* mov $7,%edx */
+				 0xcd, 0x80, /* int $0x80 */
+
+				 0x31, 0xc0, /* xor %eax,%eax */
 				 0x31, 0xdb, /* xor %ebx,%ebx */
 				 0x31, 0xc9, /* xor %ecx,%ecx */
 				 0x31, 0xd2, /* xor %edx,%edx */
 				 0x31, 0xf6, /* xor %esi,%esi */
-				 0x31, 0xff  /* xor %edi,%edi */
+				 0x31, 0xff, /* xor %edi,%edi */
+				 0x90, 0x90, 0x90 /* nops */
 			  } };
 
 MLBIT(10) load_mem = { {  /* 0x8d, 0x35, */ /* lea mem,%esi */
@@ -83,7 +97,7 @@ MLBIT(8) mexit = { { 0x31, 0xc0, /* xor %eax,%eax */
 			 } };
 
 MLBIT(4) mchmod = { { 0x90, 0x90, /* nops */
-				  0x89, 0xf9  /* mov %edi,%ecx */
+				  0x89, 0xfa  /* mov %edi,%edx */
 			   } };
 
 
@@ -99,28 +113,33 @@ MLBIT(8) dec = { { 0x8a, 0x04, 0x3e, /* mov (%esi,%edi),%eax */
 			    0x90 /* nop */
 			} };
 
-MLBIT(4) short_jmp = { { 0x90, 0x90, /* nops */
-					0xeb, 0x00 /* jmp short byte */
-			      } };
+//MLBIT(4) short_jmp = { { 0x90, 0x90, /* nops */
+//					0xeb, 0x00 /* jmp short byte */
+//			      } };
 
-MLBIT(8) long_jmp = { { 0x90, 0x90, 0x90, /* nops */
-				    0xe9, 0x00, 0x00, 0x00, 0x00 /* long jmp */
-				} };
+MLBIT(8) abs_jmp = { { 0x90, 0x90, /* nops */
+				   0x89, 0xf3, /* mov %esi,%ebx */
+				   0x01, 0xfb, /* add %edi,%ebx */
+				   0xff, 0xe3  /* jmp *%ebx */
+			    } };
 
-MLBIT(16) short_call = { { 0x90, 0x90, 0x90, /* nops */
-					  0xe8, 0x00, 0x00, 0x00, 0x00, /* call here */
-					  0x5b, /* pop %ebx */
-					  0x83, 0xc3, 0x08, /* add $0x08,%ebx */
-					  0x89, 0xdd, /* movh %ebx,%ebp */
-					  0xeb, 0x00 /* jmp short */
-				   } };
+//MLBIT(16) short_call = { { 0x90, 0x90, 0x90, /* nops */
+//					  0xe8, 0x00, 0x00, 0x00, 0x00, /* call here */
+//					  0x5b, /* pop %ebx */
+//					  0x83, 0xc3, 0x08, /* add $0x08,%ebx */
+//					  0x89, 0xdd, /* mov %ebx,%ebp */
+//					  0xeb, 0x00 /* jmp short */
+//				   } };
 
-MLBIT(16) long_call = { { 0xe8, 0x00, 0x00, 0x00, 0x00, /* call here */
-					 0x5b, /* pop %ebx */
-					 0x83, 0xc3, 0x0a, /* add $0x0a,%ebx */
-					 0x89, 0xdd, /* mov %ebx,%ebp */
-					 0xe9, 0x00, 0x00, 0x00, 0x00 /* long jmp */
-				  } };
+MLBIT(20) abs_call = { { 0xe8, 0x00, 0x00, 0x00, 0x00, /* call here */
+			     	0x5b, /* pop %ebx */
+				     0x83, 0xc3, 0x0c, /* add $0xc,%ebx */
+				     0x89, 0xdd, /* mov %ebx,%ebp */
+				     0x89, 0xf3, /* mov %esi,%ebx */
+				     0x01, 0xfb, /* add %edi,%ebx */
+				     0xff, 0xe3, /* jmp *%ebx */
+				     0x90, 0x90, 0x90 /* nops */
+				 } };
 
 MLBIT(4) ret = { { 0x90, 0x90, /* nops */
 			    0xff, 0xe5  /* jmp %ebp */
@@ -167,6 +186,22 @@ MLBIT(8) short_jg = { { 0x90, 0x90, 0x90, /* nops */
 				    0x74, 0x00 /* je short byte */
 				} };
 
+MLBIT(12) shl = { { 0x89, 0xcb, /* mov %ecx,%ebx */
+			     0x31, 0xc9, /* xor %ecx,%ecx */
+			     0x8a, 0x0c, 0x3e, /* mov (%esi,%edi),%ecx */
+			     0xd3, 0xe0, /* shl %cl,%eax */
+			     0x89, 0xd9, /* mov %ebx,%ecx */
+			     0x90 /* nop */
+			 } };
+			
+MLBIT(12) sar = { { 0x89, 0xcb, /* mov %ecx,%ebx */
+			     0x31, 0xc9, /* xor %ecx,%ecx */
+			     0x8a, 0x0c, 0x3e, /* mov (%esi,%edi),%ecx */
+			     0xd3, 0xf8, /* sar %cl,%eax */
+			     0x89, 0xd9, /* mov %ebx,%ecx */
+			     0x90 /* nop */
+			 } };
+
 struct lxs_code {
 	int instr, opcode;
 
@@ -176,6 +211,8 @@ struct lxs_code {
 
 struct lxs_code instruction_set[] = {
 	/* read, write */
+	{ 10, 0, NULL, 0 },
+	{ 11, 0, NULL, 0 },
 	{ 12, 0, (char*)&pop, sizeof( pop ) },
 	{ 13, 0, (char*)&push, sizeof ( push ) },
 	{ 14, 0, (char*)&add, sizeof( add ) },
@@ -187,19 +224,21 @@ struct lxs_code instruction_set[] = {
 	{ 20, 0, (char*)&or, sizeof( or ) },
 	{ 21, 0, (char*)&xor, sizeof( xor ) },
 	{ 22, 0, (char*)&not, sizeof( not ) },
+	{ 23, 0, (char*)&shl, sizeof( shl ) },
+	{ 24, 0, (char*)&sar, sizeof( sar ) },
 	{ 25, 0, (char*)&del, sizeof( del ) },
 	{ 26, 1, (char*)&nop, sizeof( nop ) },
-	{ 27, 0, (char*)&short_jmp, sizeof( short_jmp ) }, /* NULL to decide size but now, only short jmp available */
+	{ 27, 0, (char*)&abs_jmp, sizeof( abs_jmp ) }, /* Absolute jumps using */
 	{ 28, 0, (char*)&cmp, sizeof( cmp ) },
 	{ 29, 0, (char*)&short_jn, sizeof( short_jn ) },
 	{ 30, 0, (char*)&short_jz, sizeof( short_jz ) },
 	{ 31, 0, (char*)&short_jm, sizeof( short_jm ) },
 	{ 32, 0, (char*)&short_jg, sizeof( short_jg ) },
-	{ 33, 1, (char*)&mexit, sizeof( mexit ) },
-	{ 34, 1, (char*)&chmod, sizeof( chmod ) },
+	{ 33, 0, (char*)&mexit, sizeof( mexit ) },
+	{ 34, 0, (char*)&mchmod, sizeof( mchmod ) },
 	{ 35, 0, (char*)&inc, sizeof( inc ) },
 	{ 36, 0, (char*)&dec, sizeof( dec ) },
-	{ 37, 0, (char*)&short_call, sizeof( short_call ) },
+	{ 37, 0, (char*)&abs_call, sizeof( abs_call ) },
 	{ 38, 1, (char*)&ret, sizeof( ret ) },
 	{ 39, 0, (char*)&stpush, sizeof( stpush ) },
 	{ 40, 0, (char*)&stpop, sizeof( stpop ) },

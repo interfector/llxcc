@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <memory.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include <elf.h>
 
@@ -10,27 +11,86 @@
 
 #define opcode_set( op, value )  (op = value, opcode( op ))
 
+//#define _DEBUG
+
 void
-sample_code()
+parse_code( const char* filename )
 {
-	int op = 0;
+	int opcode, op, code;
+	int pages = getpagesize() - 1;
+
+	struct lxs_code in;
+
+	FILE* fp;
+
+	char* line = malloc( 256 );
+
+	memset( line, 0, 256 );
+
+	if(!(fp = fopen( filename, "r")))
+	{
+		perror("fopen");
+		exit(1);
+	}
+
+	/* mprotect memory prelude */
 
 	emitobj( init );
+	insertobj( 10, pages );
+	pages = getpagesize();
+	insertobj( 23, pages );
 	emitobj( load_mem );
 
-	emitobj( push );
+	while(fgets( line, 256, fp ))
+	{
+		if(line[0] == 0 || line[0] == '#' || line[0] == '\n')
+			continue;
 
-	opcode_set( op, 1 );
+		line[strlen(line)-1] = 0;
 
-	emitobj( add );
+	#ifdef _DEBUG
+		printf("[line \"%s\"]\n", line );
+	#endif
 
-	opcode_set( op, 0 );
+		opcode = atoi( line );
+		op = opcode / 100;
+		code = opcode % 100;
 
-	emitobj( pop );
+	#ifdef _DEBUG
+		printf("[opcode %d]\n", opcode );
+	#endif
 
-	opcode_set( op, 42 );
+		if( op < 10 || op > 40 )
+		{
+			emitobj( opcode );
 
-	emitobj( mexit );
+			memset( line, 0, 256 );
+
+			continue;
+		}
+
+		in = instruction_set[ op - 10 ];
+
+		if( in.opcode == 0 )
+			opcode( code );
+		
+		emit( in.code, in.code_size );
+
+	#ifdef _DEBUG
+		int i;
+
+		printf("[ code ");
+
+		for(i = 0;i < in.code_size;i++)
+			printf("0x%x ", (unsigned char)in.code[i]);
+
+		printf(" ] \n");
+	#endif
+
+		memset( line, 0, 256 );
+	}
+
+	free( line );
 }
 
 static void
@@ -46,9 +106,9 @@ createfixups(blueprint const *bp, int codetype, char const *function)
 	((Elf32_Ehdr*)bp->parts[P_EHDR].part)->e_entry = bp->parts[P_TEXT].addr;
 
 	setsymvalue( &bp->parts[P_SYMTAB], "_start", bp->parts[P_TEXT].addr );
-	setsymvalue( &bp->parts[P_SYMTAB], "memory", bp->parts[P_DATA].addr );
+//	setsymvalue( &bp->parts[P_SYMTAB], "memory", bp->parts[P_DATA].addr );
 
-	insertobj( 14, bp->parts[P_DATA].addr );
+//	insertobj( 14, bp->parts[P_DATA].addr );
 }
 
 static int
@@ -113,7 +173,7 @@ createparts(blueprint const *bp)
 /* Creates the contents of the various parts of the object file.
  */
 static int
-populateparts(blueprint const *bp, int codetype, char const *filename, int compressed)
+populateparts(blueprint const *bp, int codetype, char const *filename )
 {
 	if (bp->parts[P_COMMENT].shtype)
 	{
@@ -128,7 +188,7 @@ populateparts(blueprint const *bp, int codetype, char const *filename, int compr
 	mach_buf = bp->parts[P_TEXT].part;
    	mach_size = bp->parts[P_TEXT].size;
    	
-   	sample_code();
+   	parse_code( filename  );
 
 	bp->parts[P_TEXT].size = pos;
 	bp->parts[P_TEXT].part = mach_buf;
@@ -162,7 +222,7 @@ compile(blueprint *bp,char const *filename)
 	if (!setnames(bp, ET_EXEC, filename))
 		return 0;
 
-	if (!populateparts(bp, ET_EXEC, filename, 0))
+	if (!populateparts(bp, ET_EXEC, filename))
 		return 0;
 
 	if (!outputelf(bp, outfilename))
@@ -194,7 +254,7 @@ usage(char * file)
 int
 main(int argc,char *argv[])
 {
-	int i,n;
+	int i;
 	blueprint b = { 0 };
 
 	if(!argv[1])
@@ -205,8 +265,8 @@ main(int argc,char *argv[])
 	
 	xalloc(b.parts, P_COUNT * sizeof(*b.parts));
 	
-	for (n = 0 ; n < P_COUNT ; ++n)
-		    b.parts[n] = *parttable[n];
+	for (i = 0 ; i < P_COUNT ; ++i)
+		    b.parts[i] = *parttable[i];
 
 	b.parts[P_COMMENT].shtype = 0;
 
