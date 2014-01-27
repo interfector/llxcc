@@ -11,18 +11,18 @@
 
 #define opcode_set( op, value )  (op = value, opcode( op ))
 
-//#define _DEBUG
+int table[LEN];
+int table_pos = 0;
+int exec_table_pos = 0;
 
 void
-parse_code( const char* filename )
+parse_code(blueprint const *bp, const char* filename )
 {
-	int opcode, op, code;
+	int opcode, i;
+	char op, code;
 	int pages = getpagesize() - 1;
-
 	struct lxs_code in;
-
 	FILE* fp;
-
 	char* line = malloc( 256 );
 
 	memset( line, 0, 256 );
@@ -56,39 +56,46 @@ parse_code( const char* filename )
 		op = opcode / 100;
 		code = opcode % 100;
 
-	#ifdef _DEBUG
-		printf("[opcode %d]\n", opcode );
-	#endif
-
-		if( op < 10 || op > 40 )
+	/*	if( op < 10 || op > 40 )
 		{
-			emitobj( opcode );
+			emit( &null_code, 4 );
+			insertobj( pos - 3, code);
+			insertobj( pos - 1, op);
+			emitobj( null_code );
 
 			memset( line, 0, 256 );
 
 			continue;
-		}
+		}*/
 
-		in = instruction_set[ op - 10 ];
-
-		if( in.opcode == 0 )
-			opcode( code );
+		opcode( op, code );
 		
-		emit( in.code, in.code_size );
-
-	#ifdef _DEBUG
-		int i;
-
-		printf("[ code ");
-
-		for(i = 0;i < in.code_size;i++)
-			printf("0x%x ", (unsigned char)in.code[i]);
-
-		printf(" ] \n");
-	#endif
-
 		memset( line, 0, 256 );
 	}
+
+	/* write all the instruction table then search for 0xe8deadc0de and substitute deadc0de with table addr*/
+
+#ifdef _DEBUG
+	printf("size: %d\n", LEN);
+#endif
+
+	for(i = 0;i < LEN;i++)
+	{
+		in = instruction_set[i];
+
+		table[i] = pos;
+
+		emit( in.code, in.code_size );
+	}
+
+	exec_table_pos = pos;
+
+	emitobj( exec_table );
+
+	table_pos = pos;
+
+	for(i = 0;i < LEN;i++)
+		emitobj( table[i] );
 
 	free( line );
 }
@@ -97,7 +104,6 @@ static void
 addrelocations(blueprint const *bp, int codetype, char const *function)
 {
 	addtosymtab(bp->parts + P_SYMTAB, function, STB_GLOBAL, STT_FUNC, P_TEXT);
-	addtosymtab(bp->parts + P_SYMTAB, "memory", STB_LOCAL,  STT_OBJECT, P_DATA);
 } 
 
 void
@@ -106,9 +112,6 @@ createfixups(blueprint const *bp, int codetype, char const *function)
 	((Elf32_Ehdr*)bp->parts[P_EHDR].part)->e_entry = bp->parts[P_TEXT].addr;
 
 	setsymvalue( &bp->parts[P_SYMTAB], "_start", bp->parts[P_TEXT].addr );
-//	setsymvalue( &bp->parts[P_SYMTAB], "memory", bp->parts[P_DATA].addr );
-
-//	insertobj( 14, bp->parts[P_DATA].addr );
 }
 
 static int
@@ -188,7 +191,7 @@ populateparts(blueprint const *bp, int codetype, char const *filename )
 	mach_buf = bp->parts[P_TEXT].part;
    	mach_size = bp->parts[P_TEXT].size;
    	
-   	parse_code( filename  );
+   	parse_code( bp, filename  );
 
 	bp->parts[P_TEXT].size = pos;
 	bp->parts[P_TEXT].part = mach_buf;
@@ -197,12 +200,48 @@ populateparts(blueprint const *bp, int codetype, char const *filename )
 	if (!(bp->parts[P_DATA].part = calloc(1000, 1)))
 		return 0;
 
+	bp->parts[P_DATA].part = mach_buf;
+
 	addrelocations(bp, ET_EXEC, functionname);
 
 	fillparts(bp);
 
 	if (!computeoffsets(bp))
 		return 0;
+
+#ifdef _DEBUG
+	printf("0x%x\n", bp->parts[P_TEXT].addr );
+#endif
+
+	int i, addr;
+	char call[] = { 0xe8, 0xde, 0xad, 0xc0, 0xde };
+	char mov[] = { 0xba, 0xde, 0xad, 0xc0, 0xde };
+	char* text = bp->parts[P_TEXT].part;
+
+	for(i = 0;i < pos;i++) {
+		if(!memcmp( text+i, call, 5 )) {
+			addr = exec_table_pos - (i + 5);
+			memcpy( text+i+1, &addr, sizeof(int));
+		}
+	}
+
+	for(i = 0;i < pos;i++) {
+		if(!memcmp( text+i, mov, 5 )) {
+			addr = table_pos + bp->parts[P_TEXT].addr;
+			memcpy( text+i+1, &addr, sizeof(int));
+		}
+	}
+
+	for(i = 0;i < LEN;i++)
+	{
+		table[i] += bp->parts[P_TEXT].addr;
+
+		memcpy( text + table_pos + (i*4), &table[i], sizeof(int));
+
+#ifdef _DEBUG
+		printf("table[%d]:\t0x%x\n", i, table[i] );
+#endif
+	}
 
 	createfixups(bp, codetype, functionname);
 
