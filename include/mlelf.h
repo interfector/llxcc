@@ -16,7 +16,7 @@
 
 /* The contents of the .comment section.
  *  */
-static char const	comment[] = "\0ELF LXS Compiler 0.0.1";
+static char const	comment[] = "\0ELF LXS Compiler";
 
 static char* mach_buf;
 static int mach_size = 0;
@@ -31,7 +31,7 @@ static int pos = 0;
  *  */
 #define	insertobj(at, obj)	(memcpy(mach_buf + (at), &(obj), sizeof (obj)))
 
-#define	opcode( op, val )	(emitobj(opcode_set), insertobj( pos - 8, val), insertobj( pos - 6, op))
+#define	opcode( op, val )	(emitobj(opcode_set), insertobj( pos - 10/* 8 */, val), insertobj( pos - 8/* 6 */, op))
 
 static void
 emit(void const *bytes, int size)
