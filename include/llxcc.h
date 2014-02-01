@@ -4,9 +4,9 @@
 /* eax     Accumulator */
 /* ebx     Use for calculating */
 /* ecx     Flags */
-/* edx     Mode */
-/* ebp     Old EIP */
-/* esp     Stack */
+/* -0x8(%esi)     Stack Pointer */
+/* -0xc(%esi)     Stack index */
+/* -0x10(%esi)    Mode */
 
 #define MLBIT(size) static struct { unsigned char _dummy[size]; } const
 
@@ -43,121 +43,150 @@ MLBIT(29) load_mem = { {
 	0x89,0x5e,0xf0,               	/* *** mov    %ebx,-0x10(%esi) */
 	0x31,0xdb,                    	/* *** xor    %ebx,%ebx */
 	0x89,0x5e,0xf4,               	/* *** mov    %ebx,-0xc(%esi) */
-	0x89,0x5e,0xf0,               	/* *** mov    %ebx,-0x10(%esi) */
+	0x89,0x5e,0xec,               	/* *** mov    %ebx,-0x14(%esi) */
 } };
 
 MLBIT(5) null_code = { { 0x90, 0x90, 0x90, 0x90, 0x90 } };
 
-MLBIT(11) opcode_set = { { 0x6a, 0x00, /* push val */
-					 0x6a, 0x00, /* push opcode */
-					 0xe8, 0xde, 0xad, 0xc0, 0xde, /* call exec_table */
-					 0x5b, 0x5b /* pop %ebx (x2) */
-				  } };
-
-MLBIT(60) exec_table = {{
-/* 0037 */	0x55,                         	/* push   %ebp */
-/* 0038 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
-/* 003a */	0x8b,0x7c,0x24,0x08,          	/* mov    0x8(%esp),%edi */
-/* 003e */	0x83,0xff,0x0a,               	/* cmp    $0xa,%edi */
-/* 0041 */	0x7c,0x2b,                    	/* jl     6e <end> */
-/* 0043 */	0x83,0xff,0x2f,               	/* cmp    $0x2f,%edi */
-/* 0046 */	0x7f,0x26,                    	/* jg     6e <end> */
-/* 003a */	0x89,0xc7,                    	/* mov    %eax,%edi */
-/* 003c */	0x8b,0x44,0x24,0x08,          	/* mov    0x8(%esp),%eax */
-/* 004b */	0x83,0xe8,0x0a,               	/* sub    $10(12),%eax */
-/* 0040 */	0xbb,0x04,0x00,0x00,0x00,     	/* mov    $0x4,%ebx */
-/* 0045 */	0xf7,0xe3,                    	/* mul    %ebx */
-/* 0047 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
-/* 0049 */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 003e */	0xff,0x74,0x24,0x0c,          	/* pushl  0xc(%esp) */
-/* 0042 */	0x52,                         	/* push   %edx */
-/* 0043 */	0xba,0xde,0xad,0xc0,0xde,     	/* mov    $0x53,%edx */
-/* 0048 */	0x01,0xd3,                    	/* add    %edx,%ebx */
-/* 004a */	0x8b,0x1b,                    	/* mov    (%ebx),%ebx */
-/* 004c */	0x5a,                         	/* pop    %edx */
-/* 004d */	0xff,0xd3,                    	/* call   *%ebx */
-/* 004d */	0x5b,						/* pop	%ebx */
-/* 004d */	0x5b,						/* pop	%ebx */
-/* 004f */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 0051 */	0x5d,                         	/* pop    %ebp */
-/* 0052 */	0xc3,                         	/* ret     */
+MLBIT(10) opcode_set = { {
+/* 0000 */	0x68,0xde,0xad,0xc0,0xde,     	/* push   $0xdeadc0de */
+/* 0005 */	0xe8,0xde,0xad,0xc0,0xde,     	/* call   a <here> */
 } };
 
-MLBIT(151) mwrite = { { 
+MLBIT(59) exec_table = {{
+/* 0000 */	0x55,                         	/* push   %ebp */
+/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+/* 0003 */	0x8b,0x7c,0x24,0x08,          	/* mov    0x8(%esp),%edi */
+/* 0007 */	0x97,                         	/* xchg   %eax,%edi */
+/* 0008 */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
+/* 000a */	0x31,0xd2,                    	/* xor    %edx,%edx */
+/* 000c */	0xb3,0x64,                    	/* mov    $0x64,%bl */
+/* 000e */	0xf7,0xf3,                    	/* div    %ebx */
+/* 0010 */	0x97,                         	/* xchg   %eax,%edi */
+/* 0011 */	0x83,0xff,0x0a,               	/* cmp    $0xa,%edi */
+/* 0014 */	0x7c,0x23,                    	/* jl     39 <end> */
+/* 0016 */	0x83,0xff,0x2f,               	/* cmp    $0x2f,%edi */
+/* 0019 */	0x7f,0x1e,                    	/* jg     39 <end> */
+/* 001b */	0x52,                         	/* push   %edx */
+/* 001c */	0x97,                         	/* xchg   %eax,%edi */
+/* 001d */	0x83,0xe8,0x0a,               	/* sub    $0xa,%eax */
+/* 0020 */	0xbb,0x04,0x00,0x00,0x00,     	/* mov    $0x4,%ebx */
+/* 0025 */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 0027 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0029 */	0x89,0xf8,                    	/* mov    %edi,%eax */
+/* 002d */	0xbf,0xde,0xad,0xc0,0xde,     	/* mov    $0xdeadc0de,%edi */
+/* 0032 */	0x01,0xfb,                    	/* add    %edi,%ebx */
+/* 0034 */	0x8b,0x1b,                    	/* mov    (%ebx),%ebx */
+/* 0036 */	0xff,0xd3,                    	/* call   *%ebx */
+/* 0038 */	0x5b,                         	/* pop    %ebx */
+/* 0039 */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 003b */	0x5d,                         	/* pop    %ebp */
+/* 003c */	0xc3,                         	/* ret     */
+} };
+
+//MLBIT(68) exec_table = {{
+//* 0000 */	0x55,                         	/* push   %ebp */
+//* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+//* 0003 */	0x8b,0x7c,0x24,0x08,          	/* mov    0x8(%esp),%edi */
+//* 001f */	0x97,                         	/* xchg   %eax,%edi */
+//* 0008 */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
+//* 000a */	0xb3,0x64,                    	/* mov    $0x64,%bl */
+//* 000c */	0xf6,0xf3,                    	/* div    %bl */
+//* 000f */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
+//* 0011 */	0x88,0xc3,                    	/* mov    %al,%bl */
+//* 0013 */	0x97,                         	/* xchg   %eax,%edi */
+//* 0013 */	0x89,0xfa,                    	/* mov    %edi,%edx */
+//* 0014 */	0x89,0xdf,                    	/* mov    %ebx,%edi */
+//* 0014 */	0x83,0xff,0x0a,               	/* cmp    $0xa,%edi */
+//* 0017 */	0x7c,0x23,                    	/* jl     3c <end> */
+//* 0019 */	0x83,0xff,0x2f,               	/* cmp    $0x2f,%edi */
+//* 001c */	0x7f,0x1e,                    	/* jg     3c <end> */
+//* 0021 */	0xc1,0xfa,0x08,               	/* sar    $0x8,%edx */
+//* 001e */	0x52,                         	/* push   %edx */
+//* 001f */	0x97,                         	/* xchg   %eax,%edi */
+//* 0020 */	0x83,0xe8,0x0a,               	/* sub    $0xa,%eax */
+//* 0023 */	0xbb,0x04,0x00,0x00,0x00,     	/* mov    $0x4,%ebx */
+//* 0028 */	0xf7,0xe3,                    	/* mul    %ebx */
+//* 002a */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+//* 002c */	0x89,0xf8,                    	/* mov    %edi,%eax */
+//* 0030 */	0xbf,0xde,0xad,0xc0,0xde,     	/* mov    $0xdeadc0de,%edi */
+//* 0035 */	0x01,0xfb,                    	/* add    %edi,%ebx */
+//* 0037 */	0x8b,0x1b,                    	/* mov    (%ebx),%ebx */
+//* 0039 */	0xff,0xd3,                    	/* call   *%ebx */
+//* 003b */	0x5b,                         	/* pop    %ebx */
+//* 003c */	0x89,0xec,                    	/* mov    %ebp,%esp */
+//* 003e */	0x5d,                         	/* pop    %ebp */
+//* 003f */	0xc3,                         	/* ret     */
+//} };
+
+
+MLBIT(131) mwrite = { { 
 /* 0000 */	0x55,                         	/* push   %ebp */
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
 /* 0007 */	0x51,                         	/* push   %ecx */
 /* 0008 */	0x50,                         	/* push   %eax */
-/* 0009 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0xb,%eax */
+/* 0009 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
 /* 000e */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 0010 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0012 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0014 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0016 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 0019 */	0xbf,0x64,0x00,0x00,0x00,     	/* mov    $0x64,%edi */
-/* 001e */	0xf7,0xe7,                    	/* mul    %edi */
-/* 0020 */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 0022 */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 0024 */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0027 */	0x01,0xd8,                    	/* add    %ebx,%eax */
-/* 0029 */	0x89,0xc7,                    	/* mov    %eax,%edi */
-/* 002b */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 002d */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 002f */	0x83,0x7e,0xf0,0x03,          	/* cmpl   $0x3,-0x10(%esi) */
-/* 0033 */	0x74,0x47,                    	/* je     7c <write_char> */
-/* 0035 */	0x83,0xff,0x00,               	/* cmp    $0x0,%edi */
-/* 0038 */	0x7e,0x13,                    	/* jle    4d <write_loop_init> */
-/* 003a */	0x31,0xd2,                    	/* xor    %edx,%edx */
-/* 003c */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 003e */	0xb9,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%ecx */
-/* 0043 */	0xf7,0xf1,                    	/* div    %ecx */
-/* 0045 */	0x89,0xd7,                    	/* mov    %edx,%edi */
-/* 0047 */	0x57,                         	/* push   %edi */
-/* 0048 */	0x89,0xc7,                    	/* mov    %eax,%edi */
-/* 004a */	0x43,                         	/* inc    %ebx */
-/* 004b */	0xeb,0xe8,                    	/* jmp    35 <push_loop> */
-/* 004d */	0x31,0xff,                    	/* xor    %edi,%edi */
-/* 004f */	0x39,0xfb,                    	/* cmp    %edi,%ebx */
-/* 0051 */	0x74,0x23,                    	/* je     76 <write_exit> */
-/* 0053 */	0x83,0x04,0x24,0x30,          	/* addl   $0x30,(%esp) */
-/* 0057 */	0x89,0xe1,                    	/* mov    %esp,%ecx */
-/* 0059 */	0x53,                         	/* push   %ebx */
-/* 005a */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 005c */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 005e */	0x31,0xd2,                    	/* xor    %edx,%edx */
-/* 0060 */	0xb8,0x04,0x00,0x00,0x00,     	/* mov    $0x4,%eax */
-/* 0065 */	0xbb,0x01,0x00,0x00,0x00,     	/* mov    $0x1,%ebx */
-/* 006a */	0xba,0x02,0x00,0x00,0x00,     	/* mov    $0x2,%edx */
-/* 006f */	0xcd,0x80,                    	/* int    $0x80 */
-/* 0071 */	0x5b,                         	/* pop    %ebx */
-/* 0072 */	0x59,                         	/* pop    %ecx */
-/* 0073 */	0x47,                         	/* inc    %edi */
-/* 0074 */	0xeb,0xd9,                    	/* jmp    4f <write_loop> */
-/* 0076 */	0x6a,0x0a,                    	/* push   $0xa */
-/* 0078 */	0x89,0xe1,                    	/* mov    %esp,%ecx */
-/* 007a */	0xeb,0x03,                    	/* jmp    7f <wexit> */
-/* 007c */	0x57,                         	/* push   %edi */
-/* 007d */	0x89,0xe1,                    	/* mov    %esp,%ecx */
-/* 007f */	0xb8,0x04,0x00,0x00,0x00,     	/* mov    $0x4,%eax */
-/* 0084 */	0xbb,0x01,0x00,0x00,0x00,     	/* mov    $0x1,%ebx */
-/* 0089 */	0xba,0x01,0x00,0x00,0x00,     	/* mov    $0x1,%edx */
-/* 008e */	0xcd,0x80,                    	/* int    $0x80 */
-/* 0090 */	0x5b,                         	/* pop    %ebx */
-/* 0091 */	0x58,                         	/* pop    %eax */
-/* 0092 */	0x59,                         	/* pop    %ecx */
-/* 0093 */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 0095 */	0x5d,                         	/* pop    %ebp */
-/* 0096 */	0xc3,                         	/* ret     */
+/* 0014 */	0x8b,0x7b,0x01,               	/* mov    0x1(%ebx),%edi */
+/* 0017 */	0x31,0xc0,                    	/* xor    %eax,%eax */
+/* 0019 */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
+/* 001b */	0x83,0x7e,0xec,0x03,          	/* cmpl   $0x3,-0x14(%esi) */
+/* 001f */	0x74,0x47,                    	/* je     68 <write_char> */
+/* 0021 */	0x83,0xff,0x00,               	/* cmp    $0x0,%edi */
+/* 0024 */	0x7e,0x13,                    	/* jle    39 <write_loop_init> */
+/* 0026 */	0x31,0xd2,                    	/* xor    %edx,%edx */
+/* 0028 */	0x89,0xf8,                    	/* mov    %edi,%eax */
+/* 002a */	0xb9,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%ecx */
+/* 002f */	0xf7,0xf1,                    	/* div    %ecx */
+/* 0031 */	0x89,0xd7,                    	/* mov    %edx,%edi */
+/* 0033 */	0x57,                         	/* push   %edi */
+/* 0034 */	0x89,0xc7,                    	/* mov    %eax,%edi */
+/* 0036 */	0x43,                         	/* inc    %ebx */
+/* 0037 */	0xeb,0xe8,                    	/* jmp    21 <push_loop> */
+/* 0039 */	0x31,0xff,                    	/* xor    %edi,%edi */
+/* 003b */	0x39,0xfb,                    	/* cmp    %edi,%ebx */
+/* 003d */	0x74,0x23,                    	/* je     62 <write_exit> */
+/* 003f */	0x83,0x04,0x24,0x30,          	/* addl   $0x30,(%esp) */
+/* 0043 */	0x89,0xe1,                    	/* mov    %esp,%ecx */
+/* 0045 */	0x53,                         	/* push   %ebx */
+/* 0046 */	0x31,0xc0,                    	/* xor    %eax,%eax */
+/* 0048 */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
+/* 004a */	0x31,0xd2,                    	/* xor    %edx,%edx */
+/* 004c */	0xb8,0x04,0x00,0x00,0x00,     	/* mov    $0x4,%eax */
+/* 0051 */	0xbb,0x01,0x00,0x00,0x00,     	/* mov    $0x1,%ebx */
+/* 0056 */	0xba,0x02,0x00,0x00,0x00,     	/* mov    $0x2,%edx */
+/* 005b */	0xcd,0x80,                    	/* int    $0x80 */
+/* 005d */	0x5b,                         	/* pop    %ebx */
+/* 005e */	0x59,                         	/* pop    %ecx */
+/* 005f */	0x47,                         	/* inc    %edi */
+/* 0060 */	0xeb,0xd9,                    	/* jmp    3b <write_loop> */
+/* 0062 */	0x6a,0x0a,                    	/* push   $0xa */
+/* 0064 */	0x89,0xe1,                    	/* mov    %esp,%ecx */
+/* 0066 */	0xeb,0x03,                    	/* jmp    6b <wexit> */
+/* 0068 */	0x57,                         	/* push   %edi */
+/* 0069 */	0x89,0xe1,                    	/* mov    %esp,%ecx */
+/* 006b */	0xb8,0x04,0x00,0x00,0x00,     	/* mov    $0x4,%eax */
+/* 0070 */	0xbb,0x01,0x00,0x00,0x00,     	/* mov    $0x1,%ebx */
+/* 0075 */	0xba,0x01,0x00,0x00,0x00,     	/* mov    $0x1,%edx */
+/* 007a */	0xcd,0x80,                    	/* int    $0x80 */
+/* 007c */	0x5b,                         	/* pop    %ebx */
+/* 007d */	0x58,                         	/* pop    %eax */
+/* 007e */	0x59,                         	/* pop    %ecx */
+/* 007f */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 0081 */	0x5d,                         	/* pop    %ebp */
+/* 0082 */	0xc3,                         	/* ret     */
 } };
 
-MLBIT(164) mread = { { 
+MLBIT(144) mread = { { 
 /* 0000 */	0x55,                         	/* push   %ebp */
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x50,                         	/* push   %eax */
 /* 0004 */	0x51,                         	/* push   %ecx */
 /* 0005 */	0x31,0xff,                    	/* xor    %edi,%edi */
-/* 0007 */	0x83,0x7e,0xf0,0x03,          	/* cmpl   $0x3,-0x10(%esi) */
+/* 0007 */	0x83,0x7e,0xec,0x03,          	/* cmpl   $0x3,-0x14(%esi) */
 /* 000b */	0x74,0x47,                    	/* je     54 <read_char> */
 /* 000d */	0xb8,0x03,0x00,0x00,0x00,     	/* mov    $0x3,%eax */
 /* 0012 */	0xbb,0x00,0x00,0x00,0x00,     	/* mov    $0x0,%ebx */
@@ -199,276 +228,201 @@ MLBIT(164) mread = { {
 /* 0077 */	0x58,                         	/* pop    %eax */
 /* 0078 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
 /* 007c */	0x50,                         	/* push   %eax */
-/* 007d */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0xb,%eax */
+/* 007d */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
 /* 0082 */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 0084 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0086 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0088 */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 008a */	0x25,0xff,0x00,0x00,0x00,     	/* and    $0xff,%eax */
-/* 008f */	0x88,0x43,0x01,               	/* mov    %al,0x1(%ebx) */
-/* 0092 */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 0094 */	0x25,0x00,0xff,0x00,0x00,     	/* and    $0xff00,%eax */
-/* 0099 */	0xc1,0xf8,0x08,               	/* sar    $0x8,%eax */
-/* 009c */	0x88,0x43,0x03,               	/* mov    %al,0x3(%ebx) */
-/* 009f */	0x58,                         	/* pop    %eax */
-/* 00a0 */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 00a2 */	0x5d,                         	/* pop    %ebp */
-/* 00a3 */	0xc3,                         	/* ret     */
+/* 0088 */	0x89,0x7b,0x01,               	/* mov    %edi,0x1(%ebx) */
+/* 008b */	0x58,                         	/* pop    %eax */
+/* 008c */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 008e */	0x5d,                         	/* pop    %ebp */
+/* 008f */	0xc3,                         	/* ret     */
 } };
 
-MLBIT(49) pop = { { 
+MLBIT(29) pop = { { 
 /* 0000 */	0x55,                         	/* push   %ebp */
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x89,0xc7,                    	/* mov    %eax,%edi */
-/* 0005 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x08(%esp),%ebx */
-/* 0009 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
+/* 0005 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 0009 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
 /* 000e */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 0010 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0012 */	0x01,0xf3,                    	/* add    %esi,%ebx */
 /* 0014 */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 0016 */	0x25,0xff,0x00,0x00,0x00,     	/* and    $0xff,%eax */
-/* 001b */	0x88,0x43,0x01,               	/* mov    %al,0x1(%ebx) */
-/* 001e */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 0020 */	0x25,0x00,0xff,0x00,0x00,     	/* and    $0xff00,%eax */
-/* 0003 */	0xc1,0xf8,0x08,               	/* sar    $0x08,%eax */
-/* 0025 */	0x88,0x43,0x03,               	/* mov    %al,0x3(%ebx) */
-/* 0028 */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 002a */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 002c */	0x5d,                         	/* pop    %ebp */
-/* 002d */	0xc3,                         	/* ret     */	
+/* 0016 */	0x89,0x43,0x01,               	/* mov    %eax,0x1(%ebx) */
+/* 0019 */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 001b */	0x5d,                         	/* pop    %ebp */
+/* 001c */	0xc3,                         	/* ret     */
 } };
 
-MLBIT(39) push = { {
-/* 002e */	0x55,                         	/* push   %ebp */
-/* 002f */	0x89,0xe5,                    	/* mov    %esp,%ebp */
-/* 0031 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x08(%esp),%ebx */
-/* 0035 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
-/* 003a */	0xf7,0xe3,                    	/* mul    %ebx */
-/* 003c */	0x89,0xc3,                    	/* mov    %eax,%ebx */
-/* 003e */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0040 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0042 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 0045 */	0xc1,0xe0,0x08,               	/* shl    $0x08,%al */
-/* 0020 */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 0022 */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 0024 */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0027 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 004b */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 004d */	0x5d,                         	/* pop    %ebp */
-/* 004e */	0xc3,                         	/* ret     */
-} };
-
-MLBIT(43) add = { {
-/* 002e */	0x55,                         	/* push   %ebp */
-/* 002f */	0x89,0xe5,                    	/* mov    %esp,%ebp */
-/* 0031 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x08(%esp),%ebx */
-/* 0003 */	0x50,                         	/* push   %eax */
-/* 0035 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
-/* 003a */	0xf7,0xe3,                    	/* mul    %ebx */
-/* 003c */	0x89,0xc3,                    	/* mov    %eax,%ebx */
-/* 003e */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0040 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0042 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 0045 */	0xc1,0xe0,0x08,               	/* shl    $0x08,%al */
-/* 0020 */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 0022 */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 0024 */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0027 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 0020 */	0x5f,                         	/* pop    %edi */
-/* 001f */	0x01,0xf8,                    	/* add    %edi,%eax */
-/* 004b */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 004d */	0x5d,                         	/* pop    %ebp */
-/* 004e */	0xc3,                         	/* ret     */
-} };
-
-MLBIT(45) sub = { {
+MLBIT(25) push = { {
 /* 0000 */	0x55,                         	/* push   %ebp */
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
-/* 0007 */	0x50,                         	/* push   %eax */
-/* 0008 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
-/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
-/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
-/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0013 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0015 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 0018 */	0xc1,0xe0,0x08,               	/* shl    $0x8,%eax */
-/* 001b */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 001d */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 001f */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0022 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 0024 */	0x5f,                         	/* pop    %edi */
-/* 0025 */	0x29,0xc7,                    	/* sub    %eax,%edi */
-/* 0027 */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 0029 */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 002b */	0x5d,                         	/* pop    %ebp */
-/* 002c */	0xc3,                         	/* ret     */
-} };
-
-MLBIT(43) mul = { {
-/* 0000 */	0x55,                         	/* push   %ebp */
-/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
-/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
-/* 0007 */	0x50,                         	/* push   %eax */
-/* 0008 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
-/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
-/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
-/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0013 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0015 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 0018 */	0xc1,0xe0,0x08,               	/* shl    $0x8,%eax */
-/* 001b */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 001d */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 001f */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0022 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 0024 */	0x5f,                         	/* pop    %edi */
-/* 0025 */	0xf7,0xe7,                    	/* mul    %edi */
-/* 0027 */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 0029 */	0x5d,                         	/* pop    %ebp */
-/* 002a */	0xc3,                         	/* ret     */
-} };
-
-MLBIT(47) mdiv = { {
-/* 0000 */	0x55,                         	/* push   %ebp */
-/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
-/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
-/* 0007 */	0x50,                         	/* push   %eax */
-/* 0008 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
-/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
-/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
-/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0013 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0015 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 0018 */	0xc1,0xe0,0x08,               	/* shl    $0x8,%eax */
-/* 001b */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 001d */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 001f */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0022 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 0024 */	0x89,0xc7,                    	/* mov    %eax,%edi */
-/* 0026 */	0x58,                         	/* pop    %eax */
-/* 0058 */	0x52,                         	/* push   %edx */
-/* 0027 */	0xf7,0xf7,                    	/* div    %edi */
-/* 0061 */	0x5a,                         	/* pop    %edx */
-/* 0029 */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 002b */	0x5d,                         	/* pop    %ebp */
-/* 002c */	0xc3,                         	/* ret     */
-} };
-
-MLBIT(49) mod = { {
-/* 0000 */	0x55,                         	/* push   %ebp */
-/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
-/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
-/* 0007 */	0x50,                         	/* push   %eax */
-/* 0008 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
-/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
-/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
-/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0013 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0015 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 0018 */	0xc1,0xe0,0x08,               	/* shl    $0x8,%eax */
-/* 001b */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 001d */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 001f */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0022 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 0024 */	0x89,0xc7,                    	/* mov    %eax,%edi */
-/* 0026 */	0x58,                         	/* pop    %eax */
-/* 0027 */	0x52,                         	/* push   %edx */
-/* 0028 */	0xf7,0xf7,                    	/* div    %edi */
-/* 002a */	0x89,0xd0,                    	/* mov    %edx,%eax */
-/* 002c */	0x5a,                         	/* pop    %edx */
-/* 002d */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 002f */	0x5d,                         	/* pop    %ebp */
-/* 0030 */	0xc3,                         	/* ret     */
-} };
-
-MLBIT(43) and = { {
-/* 0056 */	0x55,                         	/* push   %ebp */
-/* 0057 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
-/* 0059 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
-/* 005d */	0x50,                         	/* push   %eax */
-/* 005e */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
-/* 0063 */	0xf7,0xe3,                    	/* mul    %ebx */
-/* 0065 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
-/* 0067 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0069 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 006b */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 006e */	0xc1,0xe0,0x08,               	/* shl    $0x8,%eax */
-/* 0071 */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 0073 */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 0075 */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0078 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 007a */	0x5f,                         	/* pop    %edi */
-/* 007b */	0x21,0xf8,                    	/* and    %edi,%eax */
-/* 007d */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 007f */	0x5d,                         	/* pop    %ebp */
-/* 0080 */	0xc3,                         	/* ret     */
-} };
-
-MLBIT(43) or = { {
-/* 002b */	0x55,                         	/* push   %ebp */
-/* 002c */	0x89,0xe5,                    	/* mov    %esp,%ebp */
-/* 002e */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
-/* 0032 */	0x50,                         	/* push   %eax */
-/* 0033 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
-/* 0038 */	0xf7,0xe3,                    	/* mul    %ebx */
-/* 003a */	0x89,0xc3,                    	/* mov    %eax,%ebx */
-/* 003c */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 003e */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0040 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 0043 */	0xc1,0xe0,0x08,               	/* shl    $0x8,%eax */
-/* 0046 */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 0048 */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 004a */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 004d */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 004f */	0x5f,                         	/* pop    %edi */
-/* 0050 */	0x09,0xf8,                    	/* or     %edi,%eax */
-/* 0052 */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 0054 */	0x5d,                         	/* pop    %ebp */
-/* 0055 */	0xc3,                         	/* ret     */
-} };
-
-MLBIT(43) xor = { {
-/* 0000 */	0x55,                         	/* push   %ebp */
-/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
-/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
-/* 0007 */	0x50,                         	/* push   %eax */
-/* 0008 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
-/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
-/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
-/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0013 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0015 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 0018 */	0xc1,0xe0,0x08,               	/* shl    $0x8,%eax */
-/* 001b */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 001d */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 001f */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0022 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 0024 */	0x5f,                         	/* pop    %edi */
-/* 0025 */	0x31,0xf8,                    	/* xor    %edi,%eax */
-/* 0027 */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 0029 */	0x5d,                         	/* pop    %ebp */
-/* 002a */	0xc3,                         	/* ret     */
-} };
-
-MLBIT(41) not = { {
-/* 0000 */	0x55,                         	/* push   %ebp */
-/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
-/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
-/* 0007 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
+/* 0007 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
 /* 000c */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 000e */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0010 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0012 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0014 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 0017 */	0xc1,0xe0,0x08,               	/* shl    $0x8,%eax */
-/* 001a */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 001c */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 001e */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0021 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 0023 */	0xf7,0xd0,                    	/* not    %eax */
-/* 0025 */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 0027 */	0x5d,                         	/* pop    %ebp */
-/* 0028 */	0xc3,                         	/* ret     */
+/* 0012 */	0x8b,0x43,0x01,               	/* mov    0x1(%ebx),%eax */
+/* 0015 */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 0017 */	0x5d,                         	/* pop    %ebp */
+/* 0018 */	0xc3,                         	/* ret     */
+} };
+
+MLBIT(31) add = { {
+/* 0000 */	0x55,                         	/* push   %ebp */
+/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 0007 */	0x50,                         	/* push   %eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
+/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 0013 */	0x31,0xc0,                    	/* xor    %eax,%eax */
+/* 0015 */	0x8b,0x43,0x01,               	/* mov    0x1(%ebx),%eax */
+/* 0018 */	0x5f,                         	/* pop    %edi */
+/* 0019 */	0x01,0xf8,                    	/* add    %edi,%eax */
+/* 001b */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 001d */	0x5d,                         	/* pop    %ebp */
+/* 001e */	0xc3,                         	/* ret     */
+} };
+
+MLBIT(31) sub = { {
+/* 0000 */	0x55,                         	/* push   %ebp */
+/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 0007 */	0x50,                         	/* push   %eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
+/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 0013 */	0x8b,0x43,0x01,               	/* mov    0x1(%ebx),%eax */
+/* 0016 */	0x5f,                         	/* pop    %edi */
+/* 0017 */	0x29,0xc7,                    	/* sub    %eax,%edi */
+/* 0019 */	0x89,0xf8,                    	/* mov    %edi,%eax */
+/* 001b */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 001d */	0x5d,                         	/* pop    %ebp */
+/* 001e */	0xc3,                         	/* ret     */
+} };
+
+MLBIT(29) mul = { {
+/* 0000 */	0x55,                         	/* push   %ebp */
+/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 0007 */	0x50,                         	/* push   %eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
+/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 0013 */	0x8b,0x43,0x01,               	/* mov    0x1(%ebx),%eax */
+/* 0016 */	0x5f,                         	/* pop    %edi */
+/* 0017 */	0xf7,0xe7,                    	/* mul    %edi */
+/* 0019 */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 001b */	0x5d,                         	/* pop    %ebp */
+/* 001c */	0xc3,                         	/* ret     */
+} };
+
+MLBIT(31) mdiv = { {
+/* 0000 */	0x55,                         	/* push   %ebp */
+/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 0007 */	0x50,                         	/* push   %eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0x9,%eax */
+/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 0013 */	0x8b,0x7b,0x01,               	/* mov    0x1(%ebx),%edi */
+/* 0016 */	0x58,                         	/* pop    %eax */
+/* 0017 */	0x31,0xd2,                    	/* xor    %edx,%edx */
+/* 0019 */	0xf7,0xf7,                    	/* div    %edi */
+/* 001b */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 001d */	0x5d,                         	/* pop    %ebp */
+/* 001e */	0xc3,                         	/* ret     */
+} };
+
+MLBIT(33) mod = { {
+/* 0000 */	0x55,                         	/* push   %ebp */
+/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 0007 */	0x50,                         	/* push   %eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0x9,%eax */
+/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 0013 */	0x8b,0x7b,0x01,               	/* mov    0x1(%ebx),%edi */
+/* 0016 */	0x58,                         	/* pop    %eax */
+/* 0017 */	0x31,0xd2,                    	/* xor    %edx,%edx */
+/* 0019 */	0xf7,0xf7,                    	/* div    %edi */
+/* 001b */	0x89,0xd0,                    	/* mov    %edx,%eax */
+/* 001d */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 001f */	0x5d,                         	/* pop    %ebp */
+/* 0020 */	0xc3,                         	/* ret     */
+} };
+
+MLBIT(29) and = { {
+/* 0000 */	0x55,                         	/* push   %ebp */
+/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 0007 */	0x50,                         	/* push   %eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0x9,%eax */
+/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 0013 */	0x8b,0x43,0x01,               	/* mov    0x1(%ebx),%eax */
+/* 0016 */	0x5f,                         	/* pop    %edi */
+/* 0017 */	0x21,0xf8,                    	/* and    %edi,%eax */
+/* 0019 */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 001b */	0x5d,                         	/* pop    %ebp */
+/* 001c */	0xc3,                         	/* ret     */
+} };
+
+MLBIT(29) or = { {
+/* 0000 */	0x55,                         	/* push   %ebp */
+/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 0007 */	0x50,                         	/* push   %eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0x9,%eax */
+/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 0013 */	0x8b,0x43,0x01,               	/* mov    0x1(%ebx),%eax */
+/* 0016 */	0x5f,                         	/* pop    %edi */
+/* 0017 */	0x09,0xf8,                    	/* or     %edi,%eax */
+/* 0019 */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 001b */	0x5d,                         	/* pop    %ebp */
+/* 001c */	0xc3,                         	/* ret     */
+} };
+
+MLBIT(29) xor = { {
+/* 0000 */	0x55,                         	/* push   %ebp */
+/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 0007 */	0x50,                         	/* push   %eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0x9,%eax */
+/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 0013 */	0x8b,0x43,0x01,               	/* mov    0x1(%ebx),%eax */
+/* 0016 */	0x5f,                         	/* pop    %edi */
+/* 0017 */	0x31,0xf8,                    	/* xorl   %edi,%eax */
+/* 0019 */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 001b */	0x5d,                         	/* pop    %ebp */
+/* 001c */	0xc3,                         	/* ret     */
+} };
+
+MLBIT(27) not = { {
+/* 0000 */	0x55,                         	/* push   %ebp */
+/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 0007 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
+/* 000c */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 000e */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0010 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 0012 */	0x8b,0x43,0x01,               	/* mov    0x1(%ebx),%eax */
+/* 0015 */	0xf7,0xd0,                    	/* not    %eax */
+/* 0017 */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 0019 */	0x5d,                         	/* pop    %ebp */
+/* 001a */	0xc3,                         	/* ret     */
 } };
 
 MLBIT(34) del = { {
@@ -480,12 +434,11 @@ MLBIT(34) del = { {
 /* 000e */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 0010 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0012 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0014 */	0xc6,0x43,0x01,0x00,          	/* movb   $0x0,0x1(%ebx) */
-/* 0018 */	0xc6,0x43,0x03,0x00,          	/* movb   $0x0,0x3(%ebx) */
-/* 001c */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 001e */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 0020 */	0x5d,                         	/* pop    %ebp */
-/* 0021 */	0xc3,                         	/* ret     */
+/* 0014 */	0xc7,0x43,0x01,0x00,0x00,0x00,0x00,	/* movl   $0x0,0x1(%ebx) */
+/* 001b */	0x89,0xf8,                    	/* mov    %edi,%eax */
+/* 001d */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 001f */	0x5d,                         	/* pop    %ebp */
+/* 0020 */	0xc3,                         	/* ret     */
 } };
 
 MLBIT(8) nop = {{
@@ -513,74 +466,42 @@ MLBIT(14) mchmod = { {
 /* 0301 */	0x55,                         	/* push   %ebp */
 /* 0302 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0304 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
-/* 0308 */	0x89,0x5e,0xf0,               	/* mov    %ebx,-0x10(%esi) */
+/* 0308 */	0x89,0x5e,0xec,               	/* mov    %ebx,-0x14(%esi) */
 /* 030b */	0x89,0xec,                    	/* mov    %ebp,%esp */
 /* 030d */	0x5d,                         	/* pop    %ebp */
 /* 030e */	0xc3,                         	/* ret     */
 } };
 
-MLBIT(67) inc = { {
+MLBIT(28) inc = { {
 /* 0000 */	0x55,                         	/* push   %ebp */
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
 /* 0007 */	0x50,                         	/* push   %eax */
-/* 0008 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
 /* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0013 */	0x53,                         	/* push   %ebx */
-/* 0014 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0016 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 0019 */	0xc1,0xe0,0x08,               	/* shl    $0x8,%eax */
-/* 001c */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 001e */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 0020 */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0023 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 0025 */	0x5b,                         	/* pop    %ebx */
-/* 0026 */	0x40,                         	/* inc    %eax */
-/* 0027 */	0x89,0xc7,                    	/* mov    %eax,%edi */
-/* 0029 */	0x25,0xff,0x00,0x00,0x00,     	/* and    $0xff,%eax */
-/* 002e */	0x88,0x43,0x01,               	/* mov    %al,0x1(%ebx) */
-/* 0031 */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 0033 */	0x25,0x00,0xff,0x00,0x00,     	/* and    $0xff00,%eax */
-/* 0003 */	0xc1,0xf8,0x08,               	/* sar    $0xc,%eax */
-/* 0038 */	0x88,0x43,0x03,               	/* mov    %al,0x3(%ebx) */
-/* 003b */	0x58,                         	/* pop    %eax */
-/* 003c */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 003e */	0x5d,                         	/* pop    %ebp */
-/* 003f */	0xc3,                         	/* ret     */
+/* 0013 */	0x83,0x43,0x01,0x01,          	/* addl   $0x1,0x1(%ebx) */
+/* 0017 */	0x58,                         	/* pop    %eax */
+/* 0018 */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 001a */	0x5d,                         	/* pop    %ebp */
+/* 001b */	0xc3,                         	/* ret     */
 } };
 
-MLBIT(67) dec = { {
+MLBIT(28) dec = { {
 /* 0000 */	0x55,                         	/* push   %ebp */
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
 /* 0007 */	0x50,                         	/* push   %eax */
-/* 0008 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
 /* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0013 */	0x53,                         	/* push   %ebx */
-/* 0014 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0016 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 0019 */	0xc1,0xe0,0x08,               	/* shl    $0x8,%eax */
-/* 001c */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 001e */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 0020 */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0023 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 0025 */	0x5b,                         	/* pop    %ebx */
-/* 0026 */	0x48,                         	/* dec    %eax */
-/* 0027 */	0x89,0xc7,                    	/* mov    %eax,%edi */
-/* 0029 */	0x25,0xff,0x00,0x00,0x00,     	/* and    $0xff,%eax */
-/* 002e */	0x88,0x43,0x01,               	/* mov    %al,0x1(%ebx) */
-/* 0031 */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 0033 */	0x25,0x00,0xff,0x00,0x00,     	/* and    $0xff00,%eax */
-/* 0038 */	0xc1,0xf8,0x0c,               	/* sar    $0xc,%eax */
-/* 003b */	0x88,0x43,0x03,               	/* mov    %al,0x3(%ebx) */
-/* 003e */	0x58,                         	/* pop    %eax */
-/* 003f */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 0041 */	0x5d,                         	/* pop    %ebp */
-/* 0042 */	0xc3,                         	/* ret     */
+/* 0013 */	0x83,0x6b,0x01,0x01,          	/* subl   $0x1,0x1(%ebx) */
+/* 0017 */	0x58,                         	/* pop    %eax */
+/* 0018 */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 001a */	0x5d,                         	/* pop    %ebp */
+/* 001b */	0xc3,                         	/* ret     */
 } };
 
 MLBIT(28) abs_jmp = { {
@@ -588,7 +509,7 @@ MLBIT(28) abs_jmp = { {
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
 /* 0007 */	0x50,                         	/* push   %eax */
-/* 0008 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0x0a,%eax */
 /* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
@@ -607,30 +528,61 @@ MLBIT(28) abs_jmp = { {
 //					  0xeb, 0x00 /* jmp short */
 //				   } };
 
-MLBIT(49) abs_call = { {
+//MLBIT(49) abs_call = { {
+//* 0000 */	0x55,                         	/* push   %ebp */
+//* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+//* 0003 */	0x8b,0x7c,0x24,0x10,          	/* mov    0x10(%esp),%edi */
+//* 0007 */	0x8b,0x5e,0xf0,               	/* mov    -0x10(%esi),%ebx */
+//* 000a */	0x03,0x5e,0xf4,               	/* add    -0xc(%esi),%ebx */
+//* 000d */	0x89,0x3b,                    	/* mov    %edi,(%ebx) */
+//* 000f */	0x8b,0x5e,0xf4,               	/* mov    -0xc(%esi),%ebx */
+//* 0012 */	0x83,0xc3,0x04,               	/* add    $0x4,%ebx */
+//* 0015 */	0x89,0x5e,0xf4,               	/* mov    %ebx,-0xc(%esi) */
+//* 0018 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+//* 001c */	0x50,                         	/* push   %eax */
+//* 001d */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x9,%eax */
+//* 0022 */	0xf7,0xe3,                    	/* mul    %ebx */
+//* 0024 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+//* 0026 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+//* 0028 */	0x58,                         	/* pop    %eax */
+//* 0029 */	0x89,0x5c,0x24,0x04,          	/* mov    %ebx,0x4(%esp) */
+//* 002d */	0x89,0xec,                    	/* mov    %ebp,%esp */
+//* 002f */	0x5d,                         	/* pop    %ebp */
+//* 0030 */	0xc3,                         	/* ret     */
+//} };
+
+MLBIT(66) abs_call = { {
 /* 0000 */	0x55,                         	/* push   %ebp */
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x7c,0x24,0x10,          	/* mov    0x10(%esp),%edi */
-/* 0007 */	0x8b,0x5e,0xf0,               	/* mov    -0x10(%esi),%ebx */
-/* 000a */	0x03,0x5e,0xf4,               	/* add    -0xc(%esi),%ebx */
-/* 000d */	0x89,0x3b,                    	/* mov    %edi,(%ebx) */
-/* 000f */	0x8b,0x5e,0xf4,               	/* mov    -0xc(%esi),%ebx */
-/* 0012 */	0x83,0xc3,0x04,               	/* add    $0x4,%ebx */
-/* 0015 */	0x89,0x5e,0xf4,               	/* mov    %ebx,-0xc(%esi) */
-/* 0018 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
-/* 001c */	0x50,                         	/* push   %eax */
-/* 001d */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x9,%eax */
-/* 0022 */	0xf7,0xe3,                    	/* mul    %ebx */
-/* 0024 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
-/* 0026 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0028 */	0x58,                         	/* pop    %eax */
-/* 0029 */	0x89,0x5c,0x24,0x04,          	/* mov    %ebx,0x4(%esp) */
-/* 002d */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 002f */	0x5d,                         	/* pop    %ebp */
-/* 0030 */	0xc3,                         	/* ret     */
+/* 0007 */	0x29,0xf7,                    	/* sub    %esi,%edi */
+/* 000c */	0x50,                         	/* push   %eax */
+/* 000d */	0x89,0xf8,                    	/* mov    %edi,%eax */
+/* 000f */	0xbf,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%edi */
+/* 0011 */	0x31,0xd2,                    	/* xor    %edx,%edx */
+/* 0014 */	0xf7,0xf7,                    	/* div    %edi */
+/* 0016 */	0x89,0xc7,                    	/* mov    %eax,%edi */
+/* 0018 */	0x58,                         	/* pop    %eax */
+/* 0019 */	0x8b,0x5e,0xf0,               	/* mov    -0x10(%esi),%ebx */
+/* 001c */	0x03,0x5e,0xf4,               	/* add    -0xc(%esi),%ebx */
+/* 001f */	0x89,0x3b,                    	/* mov    %edi,(%ebx) */
+/* 0021 */	0x8b,0x5e,0xf4,               	/* mov    -0xc(%esi),%ebx */
+/* 0024 */	0x83,0xc3,0x04,               	/* add    $0x4,%ebx */
+/* 0027 */	0x89,0x5e,0xf4,               	/* mov    %ebx,-0xc(%esi) */
+/* 002a */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 002e */	0x50,                         	/* push   %eax */
+/* 002f */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
+/* 0034 */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 0036 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0038 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 003a */	0x58,                         	/* pop    %eax */
+/* 003b */	0x89,0x5c,0x24,0x04,          	/* mov    %ebx,0x4(%esp) */
+/* 003f */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 0041 */	0x5d,                         	/* pop    %ebp */
+/* 0042 */	0xc3,                         	/* ret     */
 } };
 
-MLBIT(28) ret = { {
+MLBIT(43) ret = { {
 /* 0000 */	0x55,                         	/* push   %ebp */
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x7e,0xf4,               	/* mov    -0xc(%esi),%edi */
@@ -639,42 +591,42 @@ MLBIT(28) ret = { {
 /* 000c */	0x8b,0x5e,0xf0,               	/* mov    -0x10(%esi),%ebx */
 /* 000f */	0x03,0x5e,0xf4,               	/* add    -0xc(%esi),%ebx */
 /* 0012 */	0x8b,0x3b,                    	/* mov    (%ebx),%edi */
-/* 0014 */	0x89,0x7c,0x24,0x04,          	/* mov    %edi,0x4(%esp) */
-/* 0018 */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 001a */	0x5d,                         	/* pop    %ebp */
-/* 001b */	0xc3,                         	/* ret     */
+/* 0014 */	0x89,0xfb,                    	/* mov    %edi,%ebx */
+/* 0016 */	0x50,                         	/* push   %eax */
+/* 0017 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xb,%eax */
+/* 001c */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 001e */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0020 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 0022 */	0x58,                         	/* pop    %eax */
+/* 0023 */	0x89,0x5c,0x24,0x04,          	/* mov    %ebx,0x4(%esp) */
+/* 0027 */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 0029 */	0x5d,                         	/* pop    %ebp */
+/* 002a */	0xc3,                         	/* ret     */
 } };
 
-MLBIT(60) stpush = { {
-/* 0033 */	0x55,                         	/* push   %ebp */
-/* 0034 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
-/* 0036 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
-/* 003a */	0x50,                         	/* push   %eax */
-/* 003b */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0xb,%eax */
-/* 0040 */	0xf7,0xe3,                    	/* mul    %ebx */
-/* 0042 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
-/* 0044 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0046 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0048 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 004b */	0xc1,0xe0,0x08,               	/* shl    $0x8,%eax */
-/* 004e */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 0050 */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 0052 */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0055 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 0057 */	0x89,0xc7,                    	/* mov    %eax,%edi */
-/* 0059 */	0x58,                         	/* pop    %eax */
-/* 005a */	0x8b,0x5e,0xf0,               	/* mov    -0x10(%esi),%ebx */
-/* 005d */	0x03,0x5e,0xf4,               	/* add    -0xc(%esi),%ebx */
-/* 0060 */	0x89,0x3b,                    	/* mov    %edi,(%ebx) */
-/* 0062 */	0x8b,0x5e,0xf4,               	/* mov    -0xc(%esi),%ebx */
-/* 0065 */	0x83,0xc3,0x04,               	/* add    $0x4,%ebx */
-/* 0068 */	0x89,0x5e,0xf4,               	/* mov    %ebx,-0xc(%esi) */
-/* 006b */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 006d */	0x5d,                         	/* pop    %ebp */
-/* 006e */	0xc3,                         	/* ret     */
+MLBIT(44) stpush = { {
+/* 0000 */	0x55,                         	/* push   %ebp */
+/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 0007 */	0x50,                         	/* push   %eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
+/* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 0013 */	0x8b,0x7b,0x01,               	/* mov    0x1(%ebx),%edi */
+/* 0016 */	0x58,                         	/* pop    %eax */
+/* 0017 */	0x8b,0x5e,0xf0,               	/* mov    -0x10(%esi),%ebx */
+/* 001a */	0x03,0x5e,0xf4,               	/* add    -0xc(%esi),%ebx */
+/* 001d */	0x89,0x3b,                    	/* mov    %edi,(%ebx) */
+/* 001f */	0x8b,0x5e,0xf4,               	/* mov    -0xc(%esi),%ebx */
+/* 0022 */	0x83,0xc3,0x04,               	/* add    $0x4,%ebx */
+/* 0025 */	0x89,0x5e,0xf4,               	/* mov    %ebx,-0xc(%esi) */
+/* 0028 */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 002a */	0x5d,                         	/* pop    %ebp */
+/* 002b */	0xc3,                         	/* ret     */
 } };
 
-MLBIT(67) stpop = { {
+MLBIT(47) stpop = { {
 /* 0000 */	0x55,                         	/* push   %ebp */
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x5e,0xf0,               	/* mov    -0x10(%esi),%ebx */
@@ -683,59 +635,46 @@ MLBIT(67) stpop = { {
 /* 000c */	0x8b,0x3b,                    	/* mov    (%ebx),%edi */
 /* 000e */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
 /* 0012 */	0x50,                         	/* push   %eax */
-/* 0013 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0xb,%eax */
+/* 0013 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
 /* 0018 */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 001a */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 001c */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 001e */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 0020 */	0x25,0xff,0x00,0x00,0x00,     	/* and    $0xff,%eax */
-/* 0025 */	0x88,0x43,0x01,               	/* mov    %al,0x1(%ebx) */
-/* 0028 */	0x89,0xf8,                    	/* mov    %edi,%eax */
-/* 002a */	0x25,0x00,0xff,0x00,0x00,     	/* and    $0xff00,%eax */
-/* 002f */	0xc1,0xf8,0x08,               	/* sar    $0x8,%eax */
-/* 0032 */	0x88,0x43,0x03,               	/* mov    %al,0x3(%ebx) */
-/* 0035 */	0x58,                         	/* pop    %eax */
-/* 0036 */	0x8b,0x7e,0xf4,               	/* mov    -0xc(%esi),%edi */
-/* 0039 */	0x83,0xef,0x04,               	/* sub    $0x4,%edi */
-/* 003c */	0x89,0x7e,0xf4,               	/* mov    %edi,-0xc(%esi) */
-/* 003f */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 0041 */	0x5d,                         	/* pop    %ebp */
-/* 0042 */	0xc3,                         	/* ret     */
+/* 001e */	0x89,0x7b,0x01,               	/* mov    %edi,0x1(%ebx) */
+/* 0021 */	0x58,                         	/* pop    %eax */
+/* 0022 */	0x8b,0x7e,0xf4,               	/* mov    -0xc(%esi),%edi */
+/* 0025 */	0x83,0xef,0x04,               	/* sub    $0x4,%edi */
+/* 0028 */	0x89,0x7e,0xf4,               	/* mov    %edi,-0xc(%esi) */
+/* 002b */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 002d */	0x5d,                         	/* pop    %ebp */
+/* 002e */	0xc3,                         	/* ret     */
 } };
 
-MLBIT(64) cmp = { {
+MLBIT(48) cmp = { {
 /* 0000 */	0x55,                         	/* push   %ebp */
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x31,0xc9,                    	/* xor    %ecx,%ecx */
 /* 0005 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
 /* 0009 */	0x50,                         	/* push   %eax */
-/* 000a */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
+/* 000a */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
 /* 000f */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 0011 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0013 */	0x01,0xf3,                    	/* add    %esi,%ebx */
-/* 0015 */	0x31,0xc0,                    	/* xor    %eax,%eax */
-/* 0017 */	0x8a,0x43,0x03,               	/* mov    0x3(%ebx),%al */
-/* 001a */	0xc1,0xe0,0x08,               	/* shl    $0x8,%eax */
-/* 001d */	0x89,0xdf,                    	/* mov    %ebx,%edi */
-/* 001f */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
-/* 0021 */	0x8a,0x5f,0x01,               	/* mov    0x1(%edi),%bl */
-/* 0024 */	0x09,0xd8,                    	/* or     %ebx,%eax */
-/* 0026 */	0x89,0xc7,                    	/* mov    %eax,%edi */
-/* 0028 */	0x58,                         	/* pop    %eax */
-/* 0029 */	0x39,0xf8,                    	/* cmp    %edi,%eax */
-/* 002b */	0x74,0x0f,                    	/* je     3c <cmp_end> */
-/* 002d */	0x39,0xf8,                    	/* cmp    %edi,%eax */
-/* 002f */	0x7c,0x06,                    	/* jl     37 <cmp_jl> */
-/* 0031 */	0x39,0xf8,                    	/* cmp    %edi,%eax */
-/* 0033 */	0x7f,0x05,                    	/* jg     3a <cmp_jg> */
-/* 0035 */	0xeb,0x05,                    	/* jmp    3c <cmp_end> */
-/* 0037 */	0x41,                         	/* inc    %ecx */
-/* 0038 */	0xeb,0x02,                    	/* jmp    3c <cmp_end> */
-/* 003a */	0x41,                         	/* inc    %ecx */
-/* 003b */	0x41,                         	/* inc    %ecx */
-/* 003c */	0x89,0xec,                    	/* mov    %ebp,%esp */
-/* 003e */	0x5d,                         	/* pop    %ebp */
-/* 003f */	0xc3,                         	/* ret     */
+/* 0015 */	0x8b,0x7b,0x01,               	/* mov    0x1(%ebx),%edi */
+/* 0018 */	0x58,                         	/* pop    %eax */
+/* 0019 */	0x39,0xf8,                    	/* cmp    %edi,%eax */
+/* 001b */	0x74,0x0f,                    	/* je     2c <cmp_end> */
+/* 001d */	0x39,0xf8,                    	/* cmp    %edi,%eax */
+/* 001f */	0x7c,0x06,                    	/* jl     27 <cmp_jl> */
+/* 0021 */	0x39,0xf8,                    	/* cmp    %edi,%eax */
+/* 0023 */	0x7f,0x05,                    	/* jg     2a <cmp_jg> */
+/* 0025 */	0xeb,0x05,                    	/* jmp    2c <cmp_end> */
+/* 0027 */	0x41,                         	/* inc    %ecx */
+/* 0028 */	0xeb,0x02,                    	/* jmp    2c <cmp_end> */
+/* 002a */	0x41,                         	/* inc    %ecx */
+/* 002b */	0x41,                         	/* inc    %ecx */
+/* 002c */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 002e */	0x5d,                         	/* pop    %ebp */
+/* 002f */	0xc3,                         	/* ret     */
 } };
 
 MLBIT(33) abs_jz = { {
@@ -743,7 +682,7 @@ MLBIT(33) abs_jz = { {
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
 /* 0007 */	0x50,                         	/* push   %eax */
-/* 0008 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
 /* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
@@ -761,7 +700,7 @@ MLBIT(33) abs_jn = { {
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
 /* 0007 */	0x50,                         	/* push   %eax */
-/* 0008 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
 /* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
@@ -779,7 +718,7 @@ MLBIT(33) abs_jm = { {
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
 /* 0007 */	0x50,                         	/* push   %eax */
-/* 0008 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
 /* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */
@@ -797,7 +736,7 @@ MLBIT(33) abs_jg = { {
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
 /* 0007 */	0x50,                         	/* push   %eax */
-/* 0008 */	0xb8,0x0b,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
+/* 0008 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0x0b,%eax */
 /* 000d */	0xf7,0xe3,                    	/* mul    %ebx */
 /* 000f */	0x89,0xc3,                    	/* mov    %eax,%ebx */
 /* 0011 */	0x01,0xf3,                    	/* add    %esi,%ebx */

@@ -31,7 +31,7 @@ static int pos = 0;
  *  */
 #define	insertobj(at, obj)	(memcpy(mach_buf + (at), &(obj), sizeof (obj)))
 
-#define	opcode( op, val )	(emitobj(opcode_set), insertobj( pos - 10/* 8 */, val), insertobj( pos - 8/* 6 */, op))
+#define	opcode( opcode )	(emitobj(opcode_set), insertobj( pos - 9, opcode))
 
 static void
 emit(void const *bytes, int size)

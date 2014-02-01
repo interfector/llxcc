@@ -3,6 +3,7 @@
 #include <string.h>
 #include <memory.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <sys/stat.h>
 #include <elf.h>
 
@@ -19,7 +20,6 @@ void
 parse_code(blueprint const *bp, const char* filename )
 {
 	int opcode, i;
-	char op, code;
 	int pages = getpagesize() - 1;
 	struct lxs_code in;
 	FILE* fp;
@@ -53,8 +53,6 @@ parse_code(blueprint const *bp, const char* filename )
 	#endif
 
 		opcode = atoi( line );
-		op = opcode / 100;
-		code = opcode % 100;
 
 	/*	if( op < 10 || op > 40 )
 		{
@@ -68,7 +66,7 @@ parse_code(blueprint const *bp, const char* filename )
 			continue;
 		}*/
 
-		opcode( op, code );
+		opcode( opcode );
 		
 		memset( line, 0, 256 );
 	}
@@ -215,7 +213,7 @@ populateparts(blueprint const *bp, int codetype, char const *filename )
 
 	int i, addr;
 	char call[] = { 0xe8, 0xde, 0xad, 0xc0, 0xde };
-	char mov[] = { 0xba, 0xde, 0xad, 0xc0, 0xde };
+	char mov[] = { 0xbf, 0xde, 0xad, 0xc0, 0xde };
 	char* text = bp->parts[P_TEXT].part;
 
 	for(i = 0;i < pos;i++) {
@@ -285,7 +283,7 @@ void
 usage(char * file)
 {
 	fprintf( stderr,
-			"Usage: %s <lxs file>\n", file);
+			"Usage: %s <lxs file> [-o <output file>]\n", file);
 
 	exit(1);
 }
@@ -299,6 +297,26 @@ main(int argc,char *argv[])
 	if(!argv[1])
 		usage( argv[0] );
 
+	while ((i = getopt(argc, argv, "ho:")) != EOF)
+	{
+		switch (i)
+		{
+			case 'o':
+				xstrndup(outfilename, optarg, strlen(optarg));
+				break;
+			case 'h':
+			default:
+				usage( argv[0] );
+				return 0;
+		}
+	}
+
+	if (optind + 1 != argc)
+	{
+		puts( (optind == argc) ? "llxcc: no input file specified." : "llxcc: multiple input files specified.");
+		return 1;
+	}
+
 	b.filetype = ET_EXEC;
 	b.partcount = P_COUNT;
 	
@@ -309,7 +327,7 @@ main(int argc,char *argv[])
 
 	b.parts[P_COMMENT].shtype = 0;
 
-	compile( &b, argv[1]);
+	compile( &b, argv[optind]);
 
 	return 0;
 }
