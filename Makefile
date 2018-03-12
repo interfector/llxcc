@@ -3,12 +3,12 @@
 VERSION = 0.0.1
 
 # includes and libs
-LIBS = -lelfparts
+LIBS = 
 
 # flags
-CFLAGS = -Wall -O3 ${LIBS} -DVERSION=\"${VERSION}\" -I./include
+CFLAGS = -Wall -O3 ${LIBS} -DVERSION=\"${VERSION}\" -I./include -m32
 
-SRC = src/main.c
+SRC = src/main.c src/libelfparts.a
 BIN = llxcc
 
 all:

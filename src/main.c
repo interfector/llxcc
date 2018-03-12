@@ -10,7 +10,7 @@
 #include <mlelf.h>
 #include <llxcc.h>
 
-#define opcode_set( op, value )  (op = value, opcode( op ))
+#define opcode_set( op, value )  (op = value, emit_opcode( op ))
 
 int table[LEN];
 int table_pos = 0;
@@ -66,7 +66,7 @@ parse_code(blueprint const *bp, const char* filename )
 			continue;
 		}*/
 
-		opcode( opcode );
+		emit_opcode( opcode );
 		
 		memset( line, 0, 256 );
 	}

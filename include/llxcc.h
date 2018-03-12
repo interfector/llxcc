@@ -120,7 +120,7 @@ MLBIT(59) exec_table = {{
 //} };
 
 
-MLBIT(131) mwrite = { { 
+MLBIT(131) mwrite_old = { { 
 /* 0000 */	0x55,                         	/* push   %ebp */
 /* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
 /* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
@@ -178,6 +178,72 @@ MLBIT(131) mwrite = { {
 /* 007f */	0x89,0xec,                    	/* mov    %ebp,%esp */
 /* 0081 */	0x5d,                         	/* pop    %ebp */
 /* 0082 */	0xc3,                         	/* ret     */
+} };
+
+MLBIT(142) mwrite = { { 
+/* 0000 */	0x55,                         	/* push   %ebp */
+/* 0001 */	0x89,0xe5,                    	/* mov    %esp,%ebp */
+/* 0003 */	0x8b,0x5c,0x24,0x08,          	/* mov    0x8(%esp),%ebx */
+/* 0007 */	0x51,                         	/* push   %ecx */
+/* 0008 */	0x50,                         	/* push   %eax */
+/* 0009 */	0xb8,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%eax */
+/* 000e */	0xf7,0xe3,                    	/* mul    %ebx */
+/* 0010 */	0x89,0xc3,                    	/* mov    %eax,%ebx */
+/* 0012 */	0x01,0xf3,                    	/* add    %esi,%ebx */
+/* 0014 */	0x8b,0x7b,0x01,               	/* mov    0x1(%ebx),%edi */
+/* 0017 */	0x31,0xc0,                    	/* xor    %eax,%eax */
+/* 0019 */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
+/* 001b */	0x83,0x7e,0xec,0x03,          	/* cmpl   $0x3,-0x14(%esi) */
+/* 001f */	0x74,0x52,                    	/* je     73 <write_char> */
+/* 0021 */	0x83,0xff,0x00,               	/* cmp    $0x0,%edi */
+/* 0024 */	0x74,0x02,                    	/* je     28 <zero_push> */
+/* 0026 */	0xeb,0x04,                    	/* jmp    2c <push_loop> */
+/* 0028 */	0x57,                         	/* push   %edi */
+/* 0029 */	0x43,                         	/* inc    %ebx */
+/* 002a */	0xeb,0x18,                    	/* jmp    44 <write_loop_init> */
+/* 002c */	0x83,0xff,0x00,               	/* cmp    $0x0,%edi */
+/* 002f */	0x7e,0x13,                    	/* jle    44 <write_loop_init> */
+/* 0031 */	0x31,0xd2,                    	/* xor    %edx,%edx */
+/* 0033 */	0x89,0xf8,                    	/* mov    %edi,%eax */
+/* 0035 */	0xb9,0x0a,0x00,0x00,0x00,     	/* mov    $0xa,%ecx */
+/* 003a */	0xf7,0xf1,                    	/* div    %ecx */
+/* 003c */	0x89,0xd7,                    	/* mov    %edx,%edi */
+/* 003e */	0x57,                         	/* push   %edi */
+/* 003f */	0x89,0xc7,                    	/* mov    %eax,%edi */
+/* 0041 */	0x43,                         	/* inc    %ebx */
+/* 0042 */	0xeb,0xe8,                    	/* jmp    2c <push_loop> */
+/* 0044 */	0x31,0xff,                    	/* xor    %edi,%edi */
+/* 0046 */	0x39,0xfb,                    	/* cmp    %edi,%ebx */
+/* 0048 */	0x74,0x23,                    	/* je     6d <write_exit> */
+/* 004a */	0x83,0x04,0x24,0x30,          	/* addl   $0x30,(%esp) */
+/* 004e */	0x89,0xe1,                    	/* mov    %esp,%ecx */
+/* 0050 */	0x53,                         	/* push   %ebx */
+/* 0051 */	0x31,0xc0,                    	/* xor    %eax,%eax */
+/* 0053 */	0x31,0xdb,                    	/* xor    %ebx,%ebx */
+/* 0055 */	0x31,0xd2,                    	/* xor    %edx,%edx */
+/* 0057 */	0xb8,0x04,0x00,0x00,0x00,     	/* mov    $0x4,%eax */
+/* 005c */	0xbb,0x01,0x00,0x00,0x00,     	/* mov    $0x1,%ebx */
+/* 0061 */	0xba,0x02,0x00,0x00,0x00,     	/* mov    $0x2,%edx */
+/* 0066 */	0xcd,0x80,                    	/* int    $0x80 */
+/* 0068 */	0x5b,                         	/* pop    %ebx */
+/* 0069 */	0x59,                         	/* pop    %ecx */
+/* 006a */	0x47,                         	/* inc    %edi */
+/* 006b */	0xeb,0xd9,                    	/* jmp    46 <write_loop> */
+/* 006d */	0x6a,0x0a,                    	/* push   $0xa */
+/* 006f */	0x89,0xe1,                    	/* mov    %esp,%ecx */
+/* 0071 */	0xeb,0x03,                    	/* jmp    76 <wexit> */
+/* 0073 */	0x57,                         	/* push   %edi */
+/* 0074 */	0x89,0xe1,                    	/* mov    %esp,%ecx */
+/* 0076 */	0xb8,0x04,0x00,0x00,0x00,     	/* mov    $0x4,%eax */
+/* 007b */	0xbb,0x01,0x00,0x00,0x00,     	/* mov    $0x1,%ebx */
+/* 0080 */	0xba,0x01,0x00,0x00,0x00,     	/* mov    $0x1,%edx */
+/* 0085 */	0xcd,0x80,                    	/* int    $0x80 */
+/* 0087 */	0x5b,                         	/* pop    %ebx */
+/* 0088 */	0x58,                         	/* pop    %eax */
+/* 0089 */	0x59,                         	/* pop    %ecx */
+/* 008a */	0x89,0xec,                    	/* mov    %ebp,%esp */
+/* 008c */	0x5d,                         	/* pop    %ebp */
+/* 008d */	0xc3,                         	/* ret     */
 } };
 
 MLBIT(144) mread = { { 

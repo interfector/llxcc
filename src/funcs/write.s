@@ -16,7 +16,17 @@ write:
 	xor	%ebx, %ebx
 
 	cmp	$3,-20(%esi)
-	je	write_char	
+	je	write_char
+
+	cmp	$0, %edi
+	je	zero_push
+
+	jmp	push_loop
+
+zero_push:
+	push	%edi
+	inc	%ebx
+	jmp	write_loop_init
 
 push_loop:
 	cmp	$0, %edi 
